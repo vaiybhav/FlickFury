@@ -1,0 +1,101 @@
+/* ===== Global Styles ===== */
+:root {
+    --bg-dark: #0a0a1a;
+    --bg-card: rgba(20, 20, 40, 0.9);
+    --primary: #ff6b35;
+    --primary-glow: rgba(255, 107, 53, 0.4);
+    --secondary: #4ecdc4;
+    --secondary-glow: rgba(78, 205, 196, 0.4);
+    --accent: #ffe66d;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --glass: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Background gradient */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(ellipse at top, rgba(78, 205, 196, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(255, 107, 53, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+#root {
+    min-height: 100vh;
+}
+
+.app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Selection */
+::selection {
+    background: var(--primary);
+    color: #fff;
+}
+
+/* Focus styles */
+:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+}
+
+/* Link defaults */
+a {
+    color: inherit;
+}
+
+/* Button defaults */
+button {
+    font-family: inherit;
+}

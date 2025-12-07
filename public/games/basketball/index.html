@@ -1,0 +1,1174 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>🏀 Flick Hoops - Multiplayer Basketball</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description"
+		content="Play basketball with friends online! Flick to shoot hoops in this multiplayer game.">
+	<script type="text/javascript" src="js/phaser.min.js"></script>
+	<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+	<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+	<script src="/config.js"></script>
+	<style type="text/css">
+		:root {
+			--bg-dark: #0a0a1a;
+			--bg-card: rgba(20, 20, 40, 0.9);
+			--primary: #ff6b35;
+			--primary-glow: rgba(255, 107, 53, 0.4);
+			--secondary: #4ecdc4;
+			--secondary-glow: rgba(78, 205, 196, 0.4);
+			--accent: #ffe66d;
+			--text-primary: #ffffff;
+			--text-secondary: rgba(255, 255, 255, 0.7);
+			--glass: rgba(255, 255, 255, 0.05);
+			--glass-border: rgba(255, 255, 255, 0.1);
+			--success: #4ade80;
+			--danger: #f87171;
+		}
+
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Outfit', sans-serif;
+			background: var(--bg-dark);
+			background-image:
+				radial-gradient(ellipse at top, rgba(78, 205, 196, 0.15) 0%, transparent 50%),
+				radial-gradient(ellipse at bottom, rgba(255, 107, 53, 0.15) 0%, transparent 50%);
+			min-height: 100vh;
+			color: var(--text-primary);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding: 1rem;
+		}
+
+		.game-header {
+			text-align: center;
+			margin-bottom: 1rem;
+			width: 100%;
+			max-width: 420px;
+		}
+
+		.game-title {
+			font-size: 2rem;
+			font-weight: 800;
+			background: linear-gradient(135deg, var(--primary), var(--accent));
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+			margin-bottom: 0.75rem;
+			animation: titlePulse 2s ease-in-out infinite;
+		}
+
+		@keyframes titlePulse {
+
+			0%,
+			100% {
+				transform: scale(1);
+			}
+
+			50% {
+				transform: scale(1.02);
+			}
+		}
+
+		.score-display {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 1rem;
+		}
+
+		.score-box {
+			background: var(--glass);
+			backdrop-filter: blur(10px);
+			border: 1px solid var(--glass-border);
+			border-radius: 16px;
+			padding: 0.5rem 1.25rem;
+			min-width: 90px;
+			transition: all 0.3s ease;
+		}
+
+		.player-score {
+			border-color: var(--secondary);
+			box-shadow: 0 0 20px var(--secondary-glow);
+		}
+
+		.opponent-score {
+			border-color: var(--primary);
+			box-shadow: 0 0 20px var(--primary-glow);
+		}
+
+		.score-label {
+			display: block;
+			font-size: 0.7rem;
+			color: var(--text-secondary);
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+
+		.score-value {
+			display: block;
+			font-size: 1.75rem;
+			font-weight: 700;
+		}
+
+		.vs-badge {
+			font-size: 0.875rem;
+			font-weight: 600;
+			color: var(--text-secondary);
+		}
+
+		.canvas-wrapper {
+			position: relative;
+			margin-bottom: 1rem;
+		}
+
+		.game-layout {
+			display: flex;
+			gap: 1rem;
+			justify-content: center;
+			align-items: flex-start;
+			flex-wrap: wrap;
+		}
+
+		.webcam-panel {
+			background: var(--bg-card);
+			border: 2px solid var(--glass-border);
+			border-radius: 16px;
+			padding: 0.75rem;
+			width: 280px;
+		}
+
+		.webcam-panel h3 {
+			margin-bottom: 0.5rem;
+			font-size: 0.9rem;
+			color: var(--text-secondary);
+		}
+
+		.webcam-feed {
+			width: 100%;
+			border-radius: 10px;
+			background: #000;
+			min-height: 180px;
+		}
+
+		.webcam-status {
+			font-size: 0.75rem;
+			color: var(--text-secondary);
+			margin-top: 0.5rem;
+		}
+
+		canvas {
+			border-radius: 20px;
+			border: 2px solid var(--glass-border);
+			box-shadow:
+				0 0 60px rgba(0, 0, 0, 0.5),
+				inset 0 0 100px rgba(0, 0, 0, 0.2);
+		}
+
+		.streak-indicator {
+			position: absolute;
+			top: 12px;
+			right: 12px;
+			background: linear-gradient(135deg, var(--primary), #ff8f6b);
+			border-radius: 50px;
+			padding: 0.4rem 0.8rem;
+			display: flex;
+			align-items: center;
+			gap: 0.4rem;
+			font-weight: 700;
+			font-size: 1rem;
+			box-shadow: 0 4px 20px var(--primary-glow);
+			opacity: 0;
+			transform: scale(0.8);
+			transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+			z-index: 100;
+		}
+
+		.streak-indicator.active {
+			opacity: 1;
+			transform: scale(1);
+		}
+
+		.streak-flames {
+			animation: flameWiggle 0.3s ease-in-out infinite;
+		}
+
+		@keyframes flameWiggle {
+
+			0%,
+			100% {
+				transform: rotate(-5deg);
+			}
+
+			50% {
+				transform: rotate(5deg);
+			}
+		}
+
+		.controls-info {
+			color: var(--text-secondary);
+			font-size: 0.85rem;
+			margin-bottom: 1rem;
+			text-align: center;
+		}
+
+		.multiplayer-panel {
+			background: var(--bg-card);
+			backdrop-filter: blur(10px);
+			border: 1px solid var(--glass-border);
+			border-radius: 16px;
+			width: 100%;
+			max-width: 420px;
+			overflow: hidden;
+		}
+
+		.panel-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 0.75rem 1rem;
+			background: var(--glass);
+			cursor: pointer;
+		}
+
+		.panel-header h2 {
+			font-size: 0.9rem;
+			font-weight: 600;
+		}
+
+		.panel-toggle {
+			background: none;
+			border: none;
+			color: var(--text-secondary);
+			cursor: pointer;
+			font-size: 0.875rem;
+			transition: transform 0.3s ease;
+		}
+
+		.panel-content {
+			padding: 1rem;
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			max-height: 300px;
+			/* Adjust as needed */
+			overflow: hidden;
+			transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+		}
+
+		.panel-content.hidden {
+			max-height: 0;
+			padding-top: 0;
+			padding-bottom: 0;
+		}
+
+		.connection-status {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			font-size: 0.8rem;
+		}
+
+		.status-dot {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			animation: pulse 2s infinite;
+		}
+
+		.status-dot.offline {
+			background: var(--danger);
+		}
+
+		.status-dot.online {
+			background: var(--success);
+		}
+
+		@keyframes pulse {
+
+			0%,
+			100% {
+				opacity: 1;
+			}
+
+			50% {
+				opacity: 0.5;
+			}
+		}
+
+		.room-controls {
+			display: flex;
+			gap: 0.5rem;
+			flex-wrap: wrap;
+		}
+
+		.room-controls input {
+			flex: 1;
+			min-width: 100px;
+			padding: 0.6rem 0.8rem;
+			border: 1px solid var(--glass-border);
+			border-radius: 10px;
+			background: var(--glass);
+			color: var(--text-primary);
+			font-family: inherit;
+			font-size: 0.9rem;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			text-align: center;
+		}
+
+		.room-controls input::placeholder {
+			color: var(--text-secondary);
+			text-transform: none;
+			letter-spacing: normal;
+		}
+
+		.room-controls input:focus {
+			outline: none;
+			border-color: var(--secondary);
+		}
+
+		.btn {
+			padding: 0.6rem 1rem;
+			border: none;
+			border-radius: 10px;
+			font-family: inherit;
+			font-size: 0.8rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s ease;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+
+		.btn-primary {
+			background: linear-gradient(135deg, var(--secondary), #3db8b0);
+			color: var(--bg-dark);
+		}
+
+		.btn-secondary {
+			background: var(--glass);
+			color: var(--text-primary);
+			border: 1px solid var(--glass-border);
+		}
+
+		.btn:hover {
+			transform: translateY(-2px);
+		}
+
+		.room-info {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 0.75rem;
+			background: var(--glass);
+			border-radius: 10px;
+			font-size: 0.85rem;
+		}
+
+		.room-info span {
+			color: var(--accent);
+			font-family: monospace;
+			font-size: 1.1rem;
+			letter-spacing: 2px;
+		}
+
+		.difficulty-toggle {
+			display: flex;
+			gap: 0.5rem;
+			margin-top: 0.5rem;
+		}
+
+		.difficulty-btn {
+			flex: 1;
+			padding: 0.5rem;
+			border: 1px solid var(--glass-border);
+			border-radius: 8px;
+			background: var(--glass);
+			color: var(--text-secondary);
+			font-family: inherit;
+			font-size: 0.75rem;
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.difficulty-btn.active {
+			background: var(--primary);
+			color: white;
+			border-color: var(--primary);
+		}
+
+		.difficulty-btn:hover:not(.active) {
+			background: var(--glass-border);
+		}
+
+		@keyframes scorePopIn {
+			0% {
+				transform: scale(1);
+			}
+
+			50% {
+				transform: scale(1.3);
+			}
+
+			100% {
+				transform: scale(1);
+			}
+		}
+
+		.score-pop {
+			animation: scorePopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+		}
+
+		.timer-box {
+			background: linear-gradient(135deg, var(--primary), #ff8f6b);
+			border-radius: 50%;
+			width: 70px;
+			height: 70px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 0 25px var(--primary-glow);
+		}
+
+		.timer-value {
+			font-size: 1.5rem;
+			font-weight: 800;
+			line-height: 1;
+		}
+
+		.timer-label {
+			font-size: 0.6rem;
+			text-transform: uppercase;
+			opacity: 0.8;
+		}
+
+		.timer-box.warning {
+			animation: timerPulse 0.5s ease-in-out infinite;
+		}
+
+		@keyframes timerPulse {
+
+			0%,
+			100% {
+				transform: scale(1);
+			}
+
+			50% {
+				transform: scale(1.1);
+			}
+		}
+
+		.start-btn {
+			margin-top: 0.75rem;
+			padding: 0.75rem 2rem;
+			background: linear-gradient(135deg, var(--success), #22c55e);
+			color: white;
+			border: none;
+			border-radius: 50px;
+			font-family: inherit;
+			font-size: 1rem;
+			font-weight: 700;
+			cursor: pointer;
+			transition: all 0.2s ease;
+			box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4);
+		}
+
+		.start-btn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 6px 25px rgba(74, 222, 128, 0.5);
+		}
+
+		.start-btn:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+			transform: none;
+		}
+
+		.game-overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(10, 10, 26, 0.85);
+			border-radius: 20px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 50;
+			transition: opacity 0.3s ease;
+		}
+
+		.game-overlay.hidden {
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		.overlay-content {
+			text-align: center;
+		}
+
+		.overlay-content h2 {
+			font-size: 2.5rem;
+			margin-bottom: 0.5rem;
+			background: linear-gradient(135deg, var(--primary), var(--accent));
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+		}
+
+		.overlay-content p {
+			color: var(--text-secondary);
+			font-size: 1rem;
+		}
+	</style>
+</head>
+
+<body>
+
+	<header class="game-header">
+		<h1 class="game-title">🏀 Flick Hoops</h1>
+		<div class="score-display">
+			<div class="score-box player-score">
+				<span class="score-label">Score</span>
+				<span class="score-value" id="player-score">0</span>
+			</div>
+			<div class="timer-box" id="timer-box">
+				<span class="timer-value" id="timer-value">60</span>
+				<span class="timer-label">sec</span>
+			</div>
+			<div class="score-box opponent-score">
+				<span class="score-label">Opponent</span>
+				<span class="score-value" id="opponent-score">0</span>
+			</div>
+		</div>
+		<button class="start-btn" id="start-btn" onclick="startGame()">▶ START GAME</button>
+	</header>
+
+	<div class="game-layout">
+		<div class="canvas-wrapper" id="canvas-wrapper">
+			<div class="game-overlay" id="game-overlay">
+				<div class="overlay-content">
+					<h2 id="overlay-title">Ready?</h2>
+					<p id="overlay-text">Click START to begin!</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="webcam-panel">
+			<h3>📷 Hand Tracking</h3>
+			<img id="webcam-feed" class="webcam-feed" src="http://localhost:5001/video_feed" alt="Webcam feed">
+			<p class="webcam-status" id="webcam-status">Make an upward flick to shoot!</p>
+		</div>
+	</div>
+
+	<p class="controls-info">👆 Flick your finger upward to shoot!</p>
+
+	<div class="multiplayer-panel">
+		<div class="panel-header" onclick="togglePanel()">
+			<h2>⚙️ Settings</h2>
+			<button class="panel-toggle" id="panel-toggle">▼</button>
+		</div>
+		<div class="panel-content" id="panel-content">
+			<div class="difficulty-toggle">
+				<button class="difficulty-btn active" onclick="setDifficulty('easy')">Easy</button>
+				<button class="difficulty-btn" onclick="setDifficulty('medium')">Medium</button>
+				<button class="difficulty-btn" onclick="setDifficulty('hard')">Hard</button>
+			</div>
+			<div class="connection-status" id="connection-status">
+				<span class="status-dot offline"></span>
+				<span>Multiplayer coming soon!</span>
+			</div>
+			<div class="room-controls">
+				<input type="text" id="room-code" placeholder="Room code..." maxlength="6">
+				<button class="btn btn-primary" id="join-room">Join</button>
+				<button class="btn btn-secondary" id="create-room">Create</button>
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+
+		// ========== GAME SETTINGS ==========
+		var DIFFICULTY = {
+			easy: { hoopSpeed: 0, hoopRange: 0 },
+			medium: { hoopSpeed: 1.2, hoopRange: 60 },
+			hard: { hoopSpeed: 2.5, hoopRange: 100 }
+		};
+		var currentDifficulty = 'easy';
+
+		// ========== TIMER VARIABLES ==========
+		var GAME_DURATION = 60; // seconds
+		var timeRemaining = GAME_DURATION;
+		var gameTimer = null;
+		var gameActive = false;
+		var high_score = 0;
+
+		// Update webcam feed URL dynamically
+		document.addEventListener('DOMContentLoaded', () => {
+			const webcamImg = document.getElementById('webcam-feed');
+			if (webcamImg) webcamImg.src = `${window.GAME_CONFIG.API_URL}/video_feed`;
+		});
+
+		// ========== HAND GESTURE CONTROL ==========
+		var GESTURE_CONFIG = {
+			pollInterval: 100,
+			flickEndpoint: `${window.GAME_CONFIG.API_URL}/flick`,
+			aimEndpoint: `${window.GAME_CONFIG.API_URL}/aim`,
+			gameEndpoint: `${window.GAME_CONFIG.API_URL}/game`,
+			enabled: true,
+			// TUNED: Even lower for slower, controlled ball
+			vyMultiplier: -500,       // Reduced from -800 (slower upward)
+			vxMultiplier: 150,        // Reduced from 400 (less X drift)
+			magMultiplier: 1.0        // No power boost
+		};
+		var gesturePollingActive = false;
+		var aimData = { leftX: 0.5, rightY: 0.5 };  // Left hand X, Right hand Y for aiming
+		var trajectoryGraphics = null;
+
+		// Register this game as active
+		function registerGame() {
+			fetch(GESTURE_CONFIG.gameEndpoint, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ game: 'basketball' })
+			}).catch(() => { });
+		}
+
+		// Unregister when leaving
+		window.addEventListener('beforeunload', function () {
+			navigator.sendBeacon(GESTURE_CONFIG.gameEndpoint + '?_method=DELETE', '');
+			fetch(GESTURE_CONFIG.gameEndpoint, { method: 'DELETE' }).catch(() => { });
+		});
+
+		// ========== GESTURE POLLING ==========
+		function startGesturePolling() {
+			if (gesturePollingActive || !GESTURE_CONFIG.enabled) return;
+			gesturePollingActive = true;
+			registerGame();  // Register basketball as active
+			console.log('👆 Hand gesture control enabled');
+			pollFlick();
+			pollHands();
+		}
+
+		// Poll for flick gestures (right hand shoots)
+		function pollFlick() {
+			if (!gesturePollingActive) return;
+
+			fetch(GESTURE_CONFIG.flickEndpoint)
+				.then(response => response.json())
+				.then(data => {
+					// Only trigger on RIGHT hand flicks
+					if (data && data.vy !== undefined && data.hand === 'Right') {
+						console.log('🏀 Flick received:', data);
+						handleGestureFlick(data);
+					}
+				})
+				.catch(err => { })
+				.finally(() => {
+					setTimeout(pollFlick, GESTURE_CONFIG.pollInterval);
+				});
+		}
+
+		// Poll for hand positions (left = X direction, right = Y power)
+		function pollHands() {
+			if (!gesturePollingActive) return;
+
+			fetch('http://localhost:5001/hands')
+				.then(response => response.json())
+				.then(data => {
+					if (data && data.left && data.right) {
+						aimData.leftX = data.left.x;
+						aimData.rightY = data.right.y;
+						updateTrajectoryPreview();
+					}
+				})
+				.catch(err => { })
+				.finally(() => {
+					setTimeout(pollHands, 50); // Poll fast for smooth preview
+				});
+		}
+
+		function updateTrajectoryPreview() {
+			if (!ball || ball.launched || !trajectoryGraphics) return;
+
+			// Clear previous trajectory
+			trajectoryGraphics.clear();
+
+			// LEFT HAND X position controls horizontal direction
+			// aimData.leftX: 0 = left side of camera, 1 = right side
+			// Map to trajectory: 0 = aim right, 1 = aim left (mirrored for natural feel)
+			var aimX = (0.5 - aimData.leftX) * 600;
+
+			// RIGHT HAND Y position controls vertical power
+			// Lower hand (higher Y value) = less power, Higher hand (lower Y value) = more power
+			var powerFromHeight = (0.8 - aimData.rightY) * 1000;  // Inverted: higher hand = more power
+			powerFromHeight = Math.max(-400, Math.min(-900, -400 - powerFromHeight * 0.8));
+			var aimVy = powerFromHeight;
+
+			// Draw trajectory dots
+			trajectoryGraphics.lineStyle(0);
+
+			var startX = ball.body.x;
+			var startY = ball.body.y;
+			var simVx = aimX * 0.8;
+			var simVy = aimVy;
+			var gravity = PHYSICS.gravity * 0.01;
+
+			for (var t = 0; t < 20; t++) {
+				var px = startX + simVx * t * 0.15;
+				var py = startY + simVy * t * 0.15 + 0.5 * gravity * t * t * 0.15 * 0.15 * 100;
+
+				var alpha = 1 - (t / 20);
+				var size = 6 - (t / 4);
+
+				trajectoryGraphics.beginFill(0xffff00, alpha * 0.6);
+				trajectoryGraphics.drawCircle(px, py, Math.max(2, size));
+				trajectoryGraphics.endFill();
+			}
+		}
+
+		function handleGestureFlick(flickData) {
+			if (!ball || ball.launched) return;
+
+			// LEFT HAND controls X direction
+			var aimX = (0.5 - aimData.leftX) * 400;
+
+			// RIGHT HAND Y position controls power/vertical velocity
+			// Lower hand = weaker shot, Higher hand = stronger shot
+			var powerFromHeight = (0.8 - aimData.rightY) * 800;
+			var vy = -400 - Math.max(0, powerFromHeight);  // Base power + boost from height
+			vy = Math.max(-900, Math.min(-400, vy));
+
+			// Clamp X for stability
+			var vx = Math.max(-200, Math.min(200, aimX));
+
+			console.log('Launching with aim vx:', vx, 'vy:', vy, 'rightY:', aimData.rightY);
+			launchWithVelocity(vx, vy);
+		}
+
+		function launchWithVelocity(vx, vy) {
+			if (!ball || ball.launched) return;
+
+			// Clear trajectory preview
+			if (trajectoryGraphics) trajectoryGraphics.clear();
+
+			ball.body.setCircle(36);
+			ball.body.setCollisionGroup(collisionGroup);
+			ball.launched = true;
+
+			game.physics.p2.gravity.y = PHYSICS.gravity;
+			game.add.tween(ball.scale).to({ x: 0.6, y: 0.6 }, 500, Phaser.Easing.Linear.None, true, 0, 0, false);
+
+			ball.body.velocity.x = vx;
+			ball.body.velocity.y = vy;
+			ball.body.rotateRight(vx / 4);
+			whoosh.play();
+		}
+
+		// ========== UI FUNCTIONS ==========
+		function togglePanel() {
+			var content = document.getElementById('panel-content');
+			var toggle = document.getElementById('panel-toggle');
+			content.classList.toggle('hidden');
+			toggle.textContent = content.classList.contains('hidden') ? '▶' : '▼';
+		}
+
+		function setDifficulty(level) {
+			currentDifficulty = level;
+			document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+			event.target.classList.add('active');
+			if (hoop) {
+				hoopBaseX = 88;
+				hoopDirection = 1;
+			}
+		}
+
+		function startGame() {
+			if (gameActive) return;
+			gameActive = true;
+			current_score = 0;
+			timeRemaining = GAME_DURATION;
+			updateScoreDisplay(0, high_score);
+			updateTimerDisplay(timeRemaining);
+			document.getElementById('start-btn').disabled = true;
+			document.getElementById('start-btn').textContent = 'PLAYING...';
+			document.getElementById('game-overlay').classList.add('hidden');
+
+			gameTimer = setInterval(function () {
+				timeRemaining--;
+				updateTimerDisplay(timeRemaining);
+				if (timeRemaining <= 0) {
+					endGame();
+				}
+			}, 1000);
+		}
+
+		function endGame() {
+			gameActive = false;
+			clearInterval(gameTimer);
+			if (current_score > high_score) {
+				high_score = current_score;
+			}
+			updateScoreDisplay(current_score, high_score);
+			document.getElementById('start-btn').disabled = false;
+			document.getElementById('start-btn').textContent = '▶ PLAY AGAIN';
+			document.getElementById('overlay-title').textContent = 'Time Up!';
+			document.getElementById('overlay-text').textContent = 'Score: ' + current_score + ' | Best: ' + high_score;
+			document.getElementById('game-overlay').classList.remove('hidden');
+		}
+
+		function updateTimerDisplay(time) {
+			var timerEl = document.getElementById('timer-value');
+			var timerBox = document.getElementById('timer-box');
+			timerEl.textContent = time;
+			if (time <= 10) {
+				timerBox.classList.add('warning');
+			} else {
+				timerBox.classList.remove('warning');
+			}
+		}
+
+		function updateScoreDisplay(score, best) {
+			var scoreEl = document.getElementById('player-score');
+			var bestEl = document.getElementById('opponent-score');
+			scoreEl.textContent = score;
+			bestEl.textContent = best;
+			scoreEl.parentElement.classList.add('score-pop');
+			setTimeout(() => scoreEl.parentElement.classList.remove('score-pop'), 400);
+		}
+
+		// ========== PHASER GAME ==========
+		var game = new Phaser.Game(400, 625, Phaser.CANVAS, 'canvas-wrapper', { preload: preload, create: create, update: update });
+
+		function preload() {
+			game.load.image('ball', 'assets/images/ball.png');
+			game.load.image('hoop', 'assets/images/hoop.png');
+			game.load.image('side rim', 'assets/images/side_rim.png');
+			game.load.image('front rim', 'assets/images/front_rim.png');
+
+			game.load.image('win0', 'assets/images/win0.png');
+			game.load.image('win1', 'assets/images/win1.png');
+			game.load.image('win2', 'assets/images/win2.png');
+			game.load.image('win3', 'assets/images/win3.png');
+			game.load.image('win4', 'assets/images/win4.png');
+			game.load.image('lose0', 'assets/images/lose0.png');
+			game.load.image('lose1', 'assets/images/lose1.png');
+			game.load.image('lose2', 'assets/images/lose2.png');
+			game.load.image('lose3', 'assets/images/lose3.png');
+			game.load.image('lose4', 'assets/images/lose4.png');
+
+			game.load.audio('score', 'assets/audio/score.wav');
+			game.load.audio('backboard', 'assets/audio/backboard.wav');
+			game.load.audio('whoosh', 'assets/audio/whoosh.wav');
+			game.load.audio('fail', 'assets/audio/fail.wav');
+			game.load.audio('spawn', 'assets/audio/spawn.wav');
+		}
+
+		var hoop,
+			left_rim,
+			right_rim,
+			ball,
+			front_rim,
+			current_score = 0;
+
+		var hoopBaseX = 88;
+		var hoopDirection = 1;
+
+		var score_sound,
+			backboard,
+			whoosh,
+			fail,
+			spawn;
+
+		var moveInTween,
+			fadeInTween,
+			moveOutTween,
+			fadeOutTween,
+			emoji,
+			emojiName;
+
+		var collisionGroup;
+
+		// ========== PHYSICS SETTINGS (EASIER - slower ball) ==========
+		var PHYSICS = {
+			gravity: 800,           // Reduced further for very floaty shots
+			launchPowerY: -700,     // Gentler launches
+			launchMultiplier: 600,  // Less horizontal
+			restitution: 0.3,       // Less bouncy rim
+			rimSize: 8              // Larger rim collision (easier to score)
+		};
+
+		function create() {
+			game.physics.startSystem(Phaser.Physics.P2JS);
+			game.physics.p2.setImpactEvents(true);
+			game.physics.p2.restitution = PHYSICS.restitution;
+			game.physics.p2.gravity.y = 0;
+
+			collisionGroup = game.physics.p2.createCollisionGroup();
+
+			score_sound = game.add.audio('score');
+			backboard = game.add.audio('backboard');
+			backboard.volume = 0.5;
+			whoosh = game.add.audio('whoosh');
+			fail = game.add.audio('fail');
+			fail.volume = 0.1;
+			spawn = game.add.audio('spawn');
+
+			// Modern gradient background
+			var gradient = game.add.graphics(0, 0);
+			gradient.beginFill(0x1a1a2e);
+			gradient.drawRect(0, 0, 400, 625);
+			gradient.endFill();
+
+			// Add court floor
+			var court = game.add.graphics(0, 0);
+			court.beginFill(0x2d1f1a);
+			court.drawRect(0, 450, 400, 175);
+			court.endFill();
+
+			// Court lines
+			var lines = game.add.graphics(0, 0);
+			lines.lineStyle(2, 0x4a3728, 0.5);
+			lines.moveTo(0, 450);
+			lines.lineTo(400, 450);
+			lines.moveTo(100, 450);
+			lines.lineTo(100, 625);
+			lines.moveTo(300, 450);
+			lines.lineTo(300, 625);
+
+			hoop = game.add.sprite(hoopBaseX, 62, 'hoop');
+			left_rim = game.add.sprite(150, 184, 'side rim');
+			right_rim = game.add.sprite(249, 184, 'side rim');
+
+			game.physics.p2.enable([left_rim, right_rim], false);
+
+			// Larger rim collision circles = easier to score
+			left_rim.body.setCircle(PHYSICS.rimSize);
+			left_rim.body.static = true;
+			left_rim.body.setCollisionGroup(collisionGroup);
+			left_rim.body.collides([collisionGroup]);
+
+			right_rim.body.setCircle(PHYSICS.rimSize);
+			right_rim.body.static = true;
+			right_rim.body.setCollisionGroup(collisionGroup);
+			right_rim.body.collides([collisionGroup]);
+
+			createBall();
+
+			game.input.onDown.add(click, this);
+			game.input.onUp.add(release, this);
+
+			// Create trajectory preview graphics (drawn on top)
+			trajectoryGraphics = game.add.graphics(0, 0);
+
+			// Start gesture polling for hand control
+			startGesturePolling();
+		}
+
+		function update() {
+
+			// ========== MOVING HOOP ==========
+			var settings = DIFFICULTY[currentDifficulty];
+			if (settings.hoopSpeed > 0) {
+				hoopBaseX += settings.hoopSpeed * hoopDirection;
+
+				// Reverse direction at boundaries
+				var minX = 88 - settings.hoopRange / 2;
+				var maxX = 88 + settings.hoopRange / 2;
+
+				if (hoopBaseX >= maxX) {
+					hoopDirection = -1;
+				} else if (hoopBaseX <= minX) {
+					hoopDirection = 1;
+				}
+
+				// Update hoop and rim positions
+				var hoopOffset = hoopBaseX - 88;
+				hoop.x = 88 + hoopOffset;
+				left_rim.body.x = 150 + hoopOffset;
+				right_rim.body.x = 249 + hoopOffset;
+			}
+
+			if (ball && ball.body.velocity.y > 0) {
+				var hoopOffset = hoopBaseX - 88;
+				front_rim = game.add.sprite(148 + hoopOffset, 182, 'front rim');
+				ball.body.collides([collisionGroup], hitRim, this);
+			}
+
+			// FIXED SCORING: Ball must pass through the hoop from above
+			// Check if ball crosses through the hoop zone (Y between 180-200)
+			if (ball && ball.body.velocity.y > 0 && ball.body.y > 180 && ball.body.y < 200 && !ball.isBelowHoop) {
+				ball.isBelowHoop = true;
+				ball.body.collideWorldBounds = false;
+				var rand = Math.floor(Math.random() * 5);
+
+				// Ball must pass through the actual hoop opening (tighter zone)
+				var hoopOffset = hoopBaseX - 88;
+				var hoopCenterX = 200 + hoopOffset;
+				var leftBound = hoopCenterX - 45;   // Tighter: was 55 wide
+				var rightBound = hoopCenterX + 45;
+
+				// ALSO check ball came from above (was recently at Y < 180)
+				var cameFromAbove = ball.body.y >= 180 && ball.body.y <= 200;
+
+				if (ball.body.x > leftBound && ball.body.x < rightBound && cameFromAbove && gameActive) {
+					emojiName = "win" + rand;
+					current_score += 1;
+					score_sound.play();
+					updateScoreDisplay(current_score, high_score);
+				} else if (gameActive) {
+					emojiName = "lose" + rand;
+					fail.play();
+				} else {
+					// Practice mode - show if it would have scored
+					if (ball.body.x > leftBound && ball.body.x < rightBound) {
+						emojiName = "win" + rand;
+					} else {
+						emojiName = "lose" + rand;
+					}
+				}
+				emoji = game.add.sprite(180, 100, emojiName);
+				emoji.scale.setTo(0.25, 0.25);
+				moveInTween = game.add.tween(emoji).from({ y: 150 }, 500, Phaser.Easing.Elastic.Out, true);
+				fadeInTween = game.add.tween(emoji).from({ alpha: 0 }, 200, Phaser.Easing.Linear.None, true, 0, 0, false);
+				moveInTween.onComplete.add(tweenOut, this);
+			}
+
+			if (ball && ball.body.y > 1200) {
+				game.physics.p2.gravity.y = 0;
+				ball.kill();
+				createBall();
+			}
+		}
+
+		function tweenOut() {
+			moveOutTween = game.add.tween(emoji).to({ y: 50 }, 600, Phaser.Easing.Elastic.In, true);
+			moveOutTween.onComplete.add(function () { emoji.kill(); }, this);
+			setTimeout(function () {
+				fadeOutTween = game.add.tween(emoji).to({ alpha: 0 }, 300, Phaser.Easing.Linear.None, true, 0, 0, false);
+			}, 450);
+		}
+
+		function hitRim() {
+			backboard.play();
+		}
+
+		function createBall() {
+			var xpos;
+			if (current_score === 0) {
+				xpos = 200;
+			} else {
+				xpos = 60 + Math.random() * 280;
+			}
+			spawn.play();
+			ball = game.add.sprite(xpos, 547, 'ball');
+			game.add.tween(ball.scale).from({ x: 0.7, y: 0.7 }, 100, Phaser.Easing.Linear.None, true, 0, 0, false);
+			game.physics.p2.enable(ball, false);
+			ball.body.setCircle(60);
+			ball.launched = false;
+			ball.isBelowHoop = false;
+		}
+
+		var location_interval;
+		var isDown = false;
+		var start_location;
+		var end_location;
+
+		function click(pointer) {
+			var bodies = game.physics.p2.hitTest(pointer.position, [ball.body]);
+			if (bodies.length) {
+				start_location = [pointer.x, pointer.y];
+				isDown = true;
+				location_interval = setInterval(function () {
+					start_location = [pointer.x, pointer.y];
+				}.bind(this), 200);
+			}
+		}
+
+		function release(pointer) {
+			if (isDown) {
+				window.clearInterval(location_interval);
+				isDown = false;
+				end_location = [pointer.x, pointer.y];
+
+				if (end_location[1] < start_location[1]) {
+					var slope = [end_location[0] - start_location[0], end_location[1] - start_location[1]];
+					var x_traj = -2300 * slope[0] / slope[1];
+					launch(x_traj);
+				}
+			}
+		}
+
+		function launch(x_traj) {
+			if (ball.launched === false) {
+				ball.body.setCircle(36);
+				ball.body.setCollisionGroup(collisionGroup);
+				ball.launched = true;
+				// Better physics - more realistic arc
+				game.physics.p2.gravity.y = PHYSICS.gravity;
+				game.add.tween(ball.scale).to({ x: 0.6, y: 0.6 }, 500, Phaser.Easing.Linear.None, true, 0, 0, false);
+				// Clamp x velocity for more predictable shots
+				var clampedX = Math.max(-800, Math.min(800, x_traj * 0.7));
+				ball.body.velocity.x = clampedX;
+				ball.body.velocity.y = PHYSICS.launchPowerY;
+				ball.body.rotateRight(clampedX / 4);
+				whoosh.play();
+			}
+		}
+
+		// ========== MULTIPLAYER (Socket.IO) ==========
+		const MP_SERVER = window.location.hostname === 'localhost'
+			? 'http://localhost:5001'
+			: `http://${window.location.hostname}:5001`;
+		let mpSocket = null;
+		let opponentScore = 0;
+
+		function initBasketballMultiplayer() {
+			try {
+				mpSocket = io(MP_SERVER);
+
+				mpSocket.on('connect', () => {
+					console.log('🏀 Connected to multiplayer server');
+					mpSocket.emit('join_room', { room: 'basketball-default', game: 'basketball' });
+				});
+
+				mpSocket.on('player_joined', (data) => {
+					console.log('🏀 Opponent joined!');
+				});
+
+				mpSocket.on('score_update', (data) => {
+					opponentScore = data.score;
+					document.getElementById('opponent-score').textContent = opponentScore;
+					document.getElementById('opponent-score').parentElement.classList.add('score-pop');
+					setTimeout(() => document.getElementById('opponent-score').parentElement.classList.remove('score-pop'), 400);
+				});
+			} catch (e) {
+				console.log('Multiplayer not available:', e);
+			}
+		}
+
+		// Broadcast score to opponent (called from score changes)
+		function broadcastScore(score) {
+			if (mpSocket && mpSocket.connected) {
+				mpSocket.emit('update_score', { score: score });
+			}
+		}
+
+		// Initialize multiplayer after a short delay
+		setTimeout(initBasketballMultiplayer, 500);
+	</script>
+
+</body>
+
+</html>

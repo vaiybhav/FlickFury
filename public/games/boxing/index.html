@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>🥊 Punch Out - Boxing Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@400;700&display=swap">
+    <script src="/config.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0a1a;
+            --primary: #ff3b3b;
+            --primary-glow: rgba(255, 59, 59, 0.4);
+            --secondary: #3b82f6;
+            --secondary-glow: rgba(59, 130, 246, 0.4);
+            --accent: #ffd700;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --success: #4ade80;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-dark);
+            background-image:
+                radial-gradient(ellipse at top, rgba(255, 59, 59, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 1rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes titlePulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        .score-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin: 1rem 0;
+        }
+
+        .score-box {
+            background: var(--glass);
+            border: 2px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 0.75rem 1.5rem;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .score-box.left {
+            border-color: var(--secondary);
+            box-shadow: 0 0 20px var(--secondary-glow);
+        }
+
+        .score-box.right {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .timer-box {
+            background: linear-gradient(135deg, var(--primary), #ff6b6b);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 25px var(--primary-glow);
+        }
+
+        .timer-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        .timer-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .game-layout {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .game-arena {
+            width: 600px;
+            height: 400px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0a0a1a 100%);
+            border: 2px solid var(--glass-border);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .webcam-panel {
+            background: var(--glass);
+            border: 2px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 0.75rem;
+            width: 280px;
+        }
+
+        .webcam-panel h3 {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .webcam-feed {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+            min-height: 180px;
+        }
+
+        .target {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            animation: targetPop 0.3s ease-out;
+        }
+
+        .target.left {
+            background: radial-gradient(circle, var(--secondary) 0%, #1e40af 100%);
+            box-shadow: 0 0 30px var(--secondary-glow);
+        }
+
+        .target.right {
+            background: radial-gradient(circle, var(--primary) 0%, #991b1b 100%);
+            box-shadow: 0 0 30px var(--primary-glow);
+        }
+
+        @keyframes targetPop {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .target.hit {
+            animation: targetHit 0.3s ease-out forwards;
+        }
+
+        @keyframes targetHit {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.3);
+            }
+
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        .combo-display {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .combo-display.active {
+            opacity: 1;
+            animation: comboPulse 0.5s ease-out;
+        }
+
+        @keyframes comboPulse {
+            0% {
+                transform: translateX(-50%) scale(1);
+            }
+
+            50% {
+                transform: translateX(-50%) scale(1.2);
+            }
+
+            100% {
+                transform: translateX(-50%) scale(1);
+            }
+        }
+
+        .start-btn {
+            margin-top: 1rem;
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, var(--success), #22c55e);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 26, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            z-index: 50;
+            transition: opacity 0.3s ease;
+        }
+
+        .game-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay-content {
+            text-align: center;
+        }
+
+        .overlay-content h2 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .overlay-content p {
+            color: var(--text-secondary);
+        }
+
+        .instructions {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .punch-indicator {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 20px;
+        }
+
+        .punch-bar {
+            width: 40%;
+            height: 20px;
+            background: var(--glass);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .punch-bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .punch-bar.left .punch-bar-fill {
+            background: var(--secondary);
+        }
+
+        .punch-bar.right .punch-bar-fill {
+            background: var(--primary);
+        }
+
+        /* Hand cursor styles - gradient circles */
+        /* Hand cursor styles - FISTS */
+        .hand-cursor {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+            pointer-events: none;
+            z-index: 100;
+            transition: left 0.05s ease-out, top 0.05s ease-out;
+            opacity: 0.9;
+            filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+        }
+
+        .hand-cursor.left::after {
+            content: '🥊';
+            filter: hue-rotate(200deg);
+            /* Blue-ish glove */
+            transform: scaleX(-1);
+            /* Flip for left hand */
+        }
+
+        .hand-cursor.right::after {
+            content: '🥊';
+            filter: hue-rotate(0deg);
+            /* Red glove */
+        }
+
+        /* Removed old gradient backgrounds since we use emoji now */
+        .hand-cursor.left {
+            background: none;
+            box-shadow: none;
+        }
+
+        .hand-cursor.right {
+            background: none;
+            box-shadow: none;
+        }
+
+        /* Punch hit indicator for debugging */
+        .punch-hit-indicator {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 200;
+            animation: punchFade 0.5s ease-out forwards;
+        }
+
+        .punch-hit-indicator .hit-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 4px black;
+        }
+
+        @keyframes punchFade {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(1.5);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="game-header">
+        <h1 class="game-title">🥊 Punch Out</h1>
+        <div class="score-display">
+            <div class="score-box left">
+                <span class="score-label">Left 👊</span>
+                <span class="score-value" id="left-score">0</span>
+            </div>
+            <div class="timer-box" id="timer-box">
+                <span class="timer-value" id="timer-value">60</span>
+                <span class="timer-label">sec</span>
+            </div>
+            <div class="score-box right">
+                <span class="score-label">Right 👊</span>
+                <span class="score-value" id="right-score">0</span>
+            </div>
+        </div>
+        <button class="start-btn" id="start-btn" onclick="startGame()">▶ START GAME</button>
+    </header>
+
+    <div class="game-layout">
+        <div class="game-arena" id="game-arena">
+            <div class="combo-display" id="combo-display">COMBO x0</div>
+            <div class="punch-indicator">
+                <div class="punch-bar left">
+                    <div class="punch-bar-fill" id="left-bar"></div>
+                </div>
+                <div class="punch-bar right">
+                    <div class="punch-bar-fill" id="right-bar"></div>
+                </div>
+            </div>
+            <div class="game-overlay" id="game-overlay">
+                <div class="overlay-content">
+                    <h2 id="overlay-title">Ready to Fight?</h2>
+                    <p id="overlay-text">Punch the targets! Blue = Left, Red = Right</p>
+                </div>
+            </div>
+            <!-- Hand cursors - gradient dots showing hand positions -->
+            <div class="hand-cursor left" id="left-cursor"></div>
+            <div class="hand-cursor right" id="right-cursor"></div>
+            <!-- OPPONENT cursors (multiplayer) -->
+            <div class="hand-cursor left opponent" id="opponent-left-cursor"
+                style="opacity: 0.6; filter: hue-rotate(120deg);"></div>
+            <div class="hand-cursor right opponent" id="opponent-right-cursor"
+                style="opacity: 0.6; filter: hue-rotate(120deg);"></div>
+        </div>
+
+        <div class="webcam-panel">
+            <h3>📷 Hand Tracking</h3>
+            <img id="webcam-feed" class="webcam-feed" src="http://localhost:5001/video_feed" alt="Webcam">
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                Punch forward to hit targets!
+            </p>
+        </div>
+    </div>
+
+    <p class="instructions">👊 Punch forward with your hands! Left hand for blue, right for red.</p>
+
+    <script>
+    <script>
+        // ========== GAME CONFIG ==========
+        const API_URL = window.GAME_CONFIG.API_URL;
+        const PUNCH_ENDPOINT = `${API_URL}/punch`;
+        const HANDS_ENDPOINT = `${API_URL}/hands`;
+        const GAME_ENDPOINT = `${API_URL}/game`;
+        
+        // Update webcam feed URL dynamically
+        document.addEventListener('DOMContentLoaded', () => {
+            const webcamImg = document.getElementById('webcam-feed');
+            if (webcamImg) webcamImg.src = `${API_URL}/video_feed`;
+        });
+        const TARGET_SPAWN_INTERVAL = 2000;     // Slower spawns (was 1500)
+        const TARGET_LIFETIME = 3000;           // More time to hit (was 2000)
+
+        // ========== GAME STATE ==========
+        let gameActive = false;
+        let timeRemaining = GAME_DURATION;
+        let gameTimer = null;
+        let spawnTimer = null;
+        let leftScore = 0;
+        let rightScore = 0;
+        let combo = 0;
+        let targets = [];
+        let targetIdCounter = 0;
+
+        // ========== DOM ELEMENTS ==========
+        const arena = document.getElementById('game-arena');
+        const leftScoreEl = document.getElementById('left-score');
+        const rightScoreEl = document.getElementById('right-score');
+        const timerEl = document.getElementById('timer-value');
+        const comboEl = document.getElementById('combo-display');
+        const leftBar = document.getElementById('left-bar');
+        const rightBar = document.getElementById('right-bar');
+
+        // ========== PUNCH POLLING ==========
+        let punchPollingActive = false;
+        const GAME_ENDPOINT = 'http://localhost:5001/game';
+
+        // Register this game as active
+        function registerGame() {
+            fetch(GAME_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game: 'boxing' })
+            }).catch(() => { });
+        }
+
+        // Unregister when leaving
+        window.addEventListener('beforeunload', function () {
+            fetch(GAME_ENDPOINT, { method: 'DELETE' }).catch(() => { });
+        });
+
+        function startPunchPolling() {
+            if (punchPollingActive) return;
+            punchPollingActive = true;
+            registerGame();  // Register boxing as active
+            pollPunch();
+        }
+
+        function pollPunch() {
+            if (!punchPollingActive) return;
+
+            fetch(PUNCH_ENDPOINT)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.hand) {
+                        handlePunch(data);
+                    }
+                })
+                .catch(() => { })
+                .finally(() => {
+                    setTimeout(pollPunch, 50); // Poll faster for boxing
+                });
+        }
+
+        function handlePunch(punchData) {
+            if (!gameActive) return;
+
+            const hand = punchData.hand; // 'Left' or 'Right'
+            const power = punchData.power || 1;
+
+            // Update punch bar
+            const bar = hand === 'Left' ? leftBar : rightBar;
+            bar.style.width = Math.min(power * 100, 100) + '%';
+            setTimeout(() => bar.style.width = '0%', 200);
+
+            // Get hand position for hit indicator
+            const cursor = hand === 'Left' ? leftCursor : rightCursor;
+            const cursorX = parseFloat(cursor.style.left) + 30; // Center of cursor
+            const cursorY = parseFloat(cursor.style.top) + 30;
+
+            // Show punch hit indicator at hand position
+            showPunchHitIndicator(cursorX, cursorY, hand, power);
+
+            // Find matching target at this position
+            const targetType = hand === 'Left' ? 'left' : 'right';
+            const matchingTarget = targets.find(t => t.type === targetType && !t.hit);
+
+            if (matchingTarget) {
+                hitTarget(matchingTarget, hand);
+            } else {
+                // Miss - reset combo
+                combo = 0;
+                updateCombo();
+            }
+        }
+
+        function hitTarget(target, hand) {
+            target.hit = true;
+            target.element.classList.add('hit');
+
+            // Score
+            combo++;
+            const points = 1 + Math.floor(combo / 5); // Bonus points for combos
+
+            if (hand === 'Left') {
+                leftScore += points;
+                leftScoreEl.textContent = leftScore;
+            } else {
+                rightScore += points;
+                rightScoreEl.textContent = rightScore;
+            }
+
+            updateCombo();
+
+            // Remove after animation
+            setTimeout(() => {
+                if (target.element.parentNode) {
+                    target.element.remove();
+                }
+                targets = targets.filter(t => t.id !== target.id);
+            }, 300);
+        }
+
+        function updateCombo() {
+            if (combo > 1) {
+                comboEl.textContent = `COMBO x${combo}`;
+                comboEl.classList.add('active');
+            } else {
+                comboEl.classList.remove('active');
+            }
+        }
+
+        // ========== DEBUG: PUNCH HIT INDICATOR ==========
+        function showPunchHitIndicator(x, y, hand, power) {
+            const indicator = document.createElement('div');
+            indicator.className = 'punch-hit-indicator';
+            indicator.style.left = x + 'px';
+            indicator.style.top = y + 'px';
+
+            // Color based on hand
+            const color = hand === 'Left' ? '#3b82f6' : '#ff3b3b';
+            indicator.style.background = `radial-gradient(circle, ${color} 0%, transparent 70%)`;
+            indicator.style.boxShadow = `0 0 ${power * 10}px ${color}`;
+
+            // Size based on power
+            const size = 40 + power * 20;
+            indicator.style.width = size + 'px';
+            indicator.style.height = size + 'px';
+            indicator.style.marginLeft = -(size / 2) + 'px';
+            indicator.style.marginTop = -(size / 2) + 'px';
+
+            // Add label
+            indicator.innerHTML = `<span class="hit-label">${hand[0]} ${power.toFixed(1)}</span>`;
+
+            arena.appendChild(indicator);
+
+            // Remove after animation
+            setTimeout(() => {
+                indicator.remove();
+            }, 500);
+        }
+
+        // ========== TARGET SPAWNING ==========
+        function spawnTarget() {
+            if (!gameActive) return;
+
+            const type = Math.random() < 0.5 ? 'left' : 'right';
+            const x = 50 + Math.random() * (arena.clientWidth - 150);
+            const y = 50 + Math.random() * (arena.clientHeight - 180);
+
+            const target = document.createElement('div');
+            target.className = `target ${type}`;
+            target.textContent = type === 'left' ? '👊' : '🤛';
+            target.style.left = x + 'px';
+            target.style.top = y + 'px';
+
+            const targetData = {
+                id: targetIdCounter++,
+                type: type,
+                element: target,
+                hit: false
+            };
+
+            targets.push(targetData);
+            arena.appendChild(target);
+
+            // Auto-remove if not hit
+            setTimeout(() => {
+                if (!targetData.hit && target.parentNode) {
+                    target.remove();
+                    targets = targets.filter(t => t.id !== targetData.id);
+                    combo = 0; // Reset combo on miss
+                    updateCombo();
+                }
+            }, TARGET_LIFETIME);
+        }
+
+        // ========== GAME CONTROL ==========
+        function startGame() {
+            if (gameActive) return;
+
+            gameActive = true;
+            leftScore = 0;
+            rightScore = 0;
+            combo = 0;
+            timeRemaining = GAME_DURATION;
+            targets = [];
+
+            leftScoreEl.textContent = '0';
+            rightScoreEl.textContent = '0';
+            timerEl.textContent = timeRemaining;
+            comboEl.classList.remove('active');
+
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('start-btn').textContent = 'FIGHTING...';
+            document.getElementById('game-overlay').classList.add('hidden');
+
+            // Start timers
+            gameTimer = setInterval(() => {
+                timeRemaining--;
+                timerEl.textContent = timeRemaining;
+                if (timeRemaining <= 0) endGame();
+            }, 1000);
+
+            spawnTimer = setInterval(spawnTarget, TARGET_SPAWN_INTERVAL);
+            spawnTarget(); // Spawn first immediately
+
+            startPunchPolling();
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameTimer);
+            clearInterval(spawnTimer);
+
+            // Clear remaining targets
+            targets.forEach(t => t.element.remove());
+            targets = [];
+
+            const totalScore = leftScore + rightScore;
+            document.getElementById('overlay-title').textContent = 'Time Up!';
+            document.getElementById('overlay-text').textContent =
+                `Total: ${totalScore} | Left: ${leftScore} | Right: ${rightScore}`;
+            document.getElementById('game-overlay').classList.remove('hidden');
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('start-btn').textContent = '▶ PLAY AGAIN';
+        }
+
+        // ========== HANDS POSITION POLLING ==========
+        let handsPollingActive = false;
+        const leftCursor = document.getElementById('left-cursor');
+        const rightCursor = document.getElementById('right-cursor');
+
+        function startHandsPolling() {
+            if (handsPollingActive) return;
+            handsPollingActive = true;
+            console.log('🥊 Starting hands polling...');
+            pollHands();
+        }
+
+        function pollHands() {
+            if (!handsPollingActive) return;
+
+            fetch(HANDS_ENDPOINT)
+                .then(res => res.json())
+                .then(data => {
+                    if (data) {
+                        updateHandCursors(data);
+                    }
+                })
+                .catch(() => { })
+                .finally(() => {
+                    setTimeout(pollHands, 30); // Poll fast for smooth cursor movement
+                });
+        }
+
+        function updateHandCursors(handsData) {
+            const arenaWidth = arena.clientWidth;
+            const arenaHeight = arena.clientHeight;
+
+            if (handsData.left) {
+                // Mirror X for natural feel (camera is mirrored)
+                const x = handsData.left.x * arenaWidth - 40;
+                const y = handsData.left.y * arenaHeight - 40;
+                leftCursor.style.left = x + 'px';
+                leftCursor.style.top = y + 'px';
+            }
+
+            if (handsData.right) {
+                const x = handsData.right.x * arenaWidth - 40;
+                const y = handsData.right.y * arenaHeight - 40;
+                rightCursor.style.left = x + 'px';
+                rightCursor.style.top = y + 'px';
+            }
+        }
+
+        // Start polling AFTER all functions are defined
+        console.log('🥊 Boxing game loaded - starting polling...');
+        startPunchPolling();
+        startHandsPolling();
+
+        // ========== MULTIPLAYER (Socket.IO) ==========
+        const SERVER_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:5001'
+            : `http://${window.location.hostname}:5001`;
+        let socket = null;
+        let playerNum = 1;
+        const opponentLeftCursor = document.getElementById('opponent-left-cursor');
+        const opponentRightCursor = document.getElementById('opponent-right-cursor');
+
+        function initMultiplayer() {
+            socket = io(SERVER_URL);
+
+            socket.on('connect', () => {
+                console.log('🔌 Connected to multiplayer server');
+                socket.emit('join_room', { room: 'boxing-default', game: 'boxing' });
+            });
+
+            socket.on('player_id', (data) => {
+                playerNum = data.playerNum;
+                console.log(`🎮 You are Player ${playerNum}`);
+            });
+
+            socket.on('player_joined', (data) => {
+                console.log(`👊 Opponent joined! Player ${data.playerNum}`);
+                showNotification('Opponent joined the fight!');
+            });
+
+            socket.on('opponent_hands', (data) => {
+                // Update opponent cursor positions
+                updateOpponentCursors(data);
+            });
+
+            socket.on('got_punched', (data) => {
+                // Show visual feedback when opponent punches us
+                flashScreen(data.hand);
+            });
+        }
+
+        function updateOpponentCursors(handsData) {
+            const arenaWidth = arena.clientWidth;
+            const arenaHeight = arena.clientHeight;
+            const hands = handsData.hands || handsData;
+
+            if (hands.left) {
+                const x = hands.left.x * arenaWidth - 40;
+                const y = hands.left.y * arenaHeight - 40;
+                opponentLeftCursor.style.left = x + 'px';
+                opponentLeftCursor.style.top = y + 'px';
+            }
+            if (hands.right) {
+                const x = hands.right.x * arenaWidth - 40;
+                const y = hands.right.y * arenaHeight - 40;
+                opponentRightCursor.style.left = x + 'px';
+                opponentRightCursor.style.top = y + 'px';
+            }
+        }
+
+        function flashScreen(hand) {
+            const color = hand === 'Left' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 59, 59, 0.3)';
+            arena.style.backgroundColor = color;
+            setTimeout(() => arena.style.backgroundColor = '', 150);
+        }
+
+        function showNotification(msg) {
+            console.log('📢', msg);
+        }
+
+        // Initialize multiplayer on load
+        initMultiplayer();
+    </script>
+
+</body>
+
+</html>

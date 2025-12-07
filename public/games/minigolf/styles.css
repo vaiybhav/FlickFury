@@ -1,0 +1,367 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
+
+:root {
+    --bg-dark: #0a0a1a;
+    --bg-card: rgba(20, 20, 40, 0.9);
+    --primary: #ff6b35;
+    --primary-glow: rgba(255, 107, 53, 0.4);
+    --secondary: #4ecdc4;
+    --secondary-glow: rgba(78, 205, 196, 0.4);
+    --accent: #ffe66d;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --glass: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg-dark);
+    background-image:
+        radial-gradient(ellipse at top, var(--secondary-glow) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, var(--primary-glow) 0%, transparent 50%);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+}
+
+#game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.screen.active {
+    display: flex;
+}
+
+#menu-screen {
+    background: var(--bg-dark);
+    background-image:
+        radial-gradient(ellipse at top, var(--secondary-glow) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, var(--primary-glow) 0%, transparent 50%);
+    color: var(--text-primary);
+    position: relative;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+#menu-screen h1 {
+    font-size: 3.5rem;
+    margin-bottom: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+    animation: titlePulse 2s ease-in-out infinite;
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes titlePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 80%;
+    max-width: 350px;
+    position: relative;
+    z-index: 1;
+}
+
+.menu-btn {
+    padding: 1.5rem 2.5rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #000;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 30px var(--primary-glow);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Outfit', sans-serif;
+    pointer-events: auto !important;
+    z-index: 1000 !important;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.menu-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 40px var(--primary-glow);
+}
+
+.menu-btn:active {
+    transform: translateY(-1px) scale(1.01);
+}
+
+
+#game-screen {
+    background: var(--bg-dark);
+    z-index: 1;
+    display: none !important;
+    position: relative;
+}
+
+#game-screen.active {
+    display: flex !important;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+#game-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+}
+
+#ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    visibility: visible;
+}
+
+#score-display {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    color: var(--text-primary);
+    padding: 15px 20px;
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    font-size: 1.1rem;
+    pointer-events: auto;
+    z-index: 101;
+    min-width: 150px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    font-weight: 600;
+}
+
+#player-turn {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: var(--secondary);
+    text-shadow: 0 0 10px var(--secondary-glow);
+}
+
+#power-indicator {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    height: 30px;
+    background: var(--bg-card);
+    border-radius: 50px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    display: none;
+    z-index: 101;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#power-indicator.active {
+    display: block;
+}
+
+#power-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--secondary), var(--primary), var(--accent));
+    transition: width 0.1s linear;
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.ui-btn {
+    position: absolute;
+    padding: 12px 20px;
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 101;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Outfit', sans-serif;
+}
+
+.ui-btn:hover {
+    background: var(--primary);
+    color: #000;
+    box-shadow: 0 8px 30px var(--primary-glow);
+    transform: translateY(-2px);
+}
+
+#reset-btn {
+    bottom: 20px;
+    left: 20px;
+}
+
+#menu-btn {
+    bottom: 20px;
+    right: 20px;
+}
+
+.ui-btn:active {
+    transform: translateY(0);
+}
+
+#game-over-screen {
+    background: rgba(10, 10, 26, 0.95);
+    background-image:
+        radial-gradient(ellipse at top, var(--secondary-glow) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, var(--primary-glow) 0%, transparent 50%);
+    color: var(--text-primary);
+    position: relative;
+}
+
+#game-over-screen h2 {
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 4px;
+    position: relative;
+    z-index: 1;
+}
+
+#final-score {
+    font-size: 1.8rem;
+    margin-bottom: 2rem;
+    color: var(--secondary);
+    text-shadow: 0 0 10px var(--secondary-glow);
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+}
+
+/* Webcam Panel */
+.webcam-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 0.75rem;
+    width: 220px;
+    z-index: 101;
+    pointer-events: auto;
+}
+
+.webcam-panel h3 {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.webcam-feed {
+    width: 100%;
+    border-radius: 10px;
+    background: #000;
+    min-height: 150px;
+}
+
+.webcam-status {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+/* Portrait orientation styles */
+@media (orientation: portrait) {
+    #menu-screen h1 {
+        font-size: 3rem;
+    }
+
+    .menu-btn {
+        padding: 1.2rem 2rem;
+        font-size: 1.2rem;
+    }
+
+    #game-over-screen h2 {
+        font-size: 2.5rem;
+    }
+}
+
+/* Landscape warning (optional) */
+@media (orientation: landscape) and (max-height: 500px) {
+    #game-container::before {
+        content: "Please rotate to portrait mode for best experience";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 1000;
+    }
+}

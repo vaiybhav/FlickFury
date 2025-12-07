@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>3D Minigolf</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="menu-screen" class="screen active">
+            <h1>3D Minigolf</h1>
+            <div class="menu-buttons">
+                <button id="single-player-btn" class="menu-btn">Single Player</button>
+                <button id="multiplayer-btn" class="menu-btn">Multiplayer</button>
+            </div>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <canvas id="game-canvas"></canvas>
+            <div id="ui-overlay">
+                <div id="score-display">
+                    <div>Strokes: <span id="stroke-count">0</span></div>
+                    <div id="player-turn">Player 1's Turn</div>
+                </div>
+                <div id="power-indicator">
+                    <div id="power-bar"></div>
+                </div>
+                <div class="webcam-panel">
+                    <h3>📷 Camera</h3>
+                    <img class="webcam-feed" src="http://localhost:5001/video_feed" alt="Webcam">
+                    <div class="webcam-status">Use hand gestures to aim & putt</div>
+                </div>
+                <button id="reset-btn" class="ui-btn">Reset Ball</button>
+                <button id="menu-btn" class="ui-btn">Menu</button>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="screen">
+            <h2>Hole Complete!</h2>
+            <div id="final-score"></div>
+            <div class="menu-buttons">
+                <button id="play-again-btn" class="menu-btn">Play Again</button>
+                <button id="back-to-menu-btn" class="menu-btn">Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="cannon.min.js"></script>
+    <script src="game.js"></script>
+</body>
+
+</html>
