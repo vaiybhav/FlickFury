@@ -10,20 +10,12 @@ mp_hands = mp.solutions.hands
 mp_draw = mp.solutions.drawing_utils
 
 # ========== CONFIGURATION ==========
-# Set to True for cloud play, False for local development
-USE_CLOUD = True
-
-if USE_CLOUD:
-    SERVER_URL = "https://flickfury.onrender.com"
-else:
-    SERVER_URL = "http://localhost:5001"
-
-FLASK_URL = f"{SERVER_URL}/flick"
-PUNCH_URL = f"{SERVER_URL}/punch"
-AIM_URL = f"{SERVER_URL}/aim"
-HANDS_URL = f"{SERVER_URL}/hands"
-FRAME_URL = f"{SERVER_URL}/video_frame"
-GAME_URL = f"{SERVER_URL}/game"
+FLASK_URL = "http://localhost:5001/flick"
+PUNCH_URL = "http://localhost:5001/punch"
+AIM_URL = "http://localhost:5001/aim"
+HANDS_URL = "http://localhost:5001/hands"
+FRAME_URL = "http://localhost:5001/video_frame"
+GAME_URL = "http://localhost:5001/game"
 CAMERA_INDEX = 0
 
 # Game-specific gesture mapping

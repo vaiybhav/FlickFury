@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🏹 Archery Master - 3D Game</title>
+    <meta name="description"
+        content="A fun 3D archery game with cartoony graphics, slow-motion arrows, and satisfying particle effects. Aim, shoot, score!">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏹</text></svg>">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="ui-overlay">
+            <!-- Title -->
+            <div id="game-title">🏹 Archery Master</div>
+
+            <!-- Stats Panel -->
+            <div id="stats-panel">
+                <div id="score">Score: 0</div>
+                <div id="combo">Combo: x1</div>
+                <div id="best-combo">Best: x1</div>
+                <div id="targets-hit">Targets: 0/6</div>
+            </div>
+
+            <!-- Controls Panel -->
+            <div id="controls-panel">
+                <button id="joystick-btn">🎮 Connect Joystick</button>
+                <button id="reset-btn">🔄 Reset</button>
+            </div>
+
+            <!-- Instructions -->
+            <div id="instructions">
+                🎯 Move mouse to aim • Click & hold to charge power • Release to shoot • Arrow keys to rotate camera
+            </div>
+
+            <!-- Power Indicator -->
+            <div id="power-indicator">
+                <div id="power-bar"></div>
+            </div>
+            <div id="power-label">Power: 0%</div>
+        </div>
+    </div>
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>

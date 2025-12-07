@@ -26,11 +26,11 @@ const games = [
         players: '1-2 Players'
     },
     {
-        id: 'coming-soon-1',
-        title: '🎯 Target Practice',
-        description: 'Aim and shoot at moving targets. Coming soon!',
-        thumbnail: null,
-        players: 'Coming Soon'
+        id: 'archery',
+        title: '🏹 Archery Master',
+        description: 'Pull back, aim, and shoot! Connect your joystick via USB for a realistic archery experience.',
+        thumbnail: '/games/archery/thumbnail.png',
+        players: '1 Player'
     }
 ]
 

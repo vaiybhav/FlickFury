@@ -14,17 +14,10 @@ let gameState = {
 };
 
 // ========== HAND GESTURE CONFIGURATION ==========
-// ========== HAND GESTURE CONFIGURATION ==========
 const GESTURE_CONFIG = {
-    flickEndpoint: `${window.GAME_CONFIG.API_URL}/flick`,
-    handsEndpoint: `${window.GAME_CONFIG.API_URL}/hands`,
-    gameEndpoint: `${window.GAME_CONFIG.API_URL}/game`,
-
-    // Update webcam feed dynamically
-    document.addEventListener('DOMContentLoaded', () => {
-        const webcamImg = document.querySelector('.webcam-feed');
-        if (webcamImg) webcamImg.src = `${window.GAME_CONFIG.API_URL}/video_feed`;
-    });
+    flickEndpoint: 'http://localhost:5001/flick',
+    handsEndpoint: 'http://localhost:5001/hands',
+    gameEndpoint: 'http://localhost:5001/game',
     pollInterval: 50,
     enabled: true,
     powerMultiplier: 12,  // Convert flick velocity to putt power

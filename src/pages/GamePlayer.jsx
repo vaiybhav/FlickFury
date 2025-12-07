@@ -17,6 +17,11 @@ const gameData = {
         title: '3D Minigolf',
         description: 'Putt your way to victory! Use hand gestures to aim and shoot.',
         path: '/games/minigolf/index.html'
+    },
+    'archery': {
+        title: 'Archery Master',
+        description: 'Realistic 3D archery! Use your joystick to aim and charge your shot.',
+        path: '/games/archery/index.html'
     }
 }
 

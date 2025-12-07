@@ -1,0 +1,18 @@
+{
+  "name": "archery-game",
+  "version": "1.0.0",
+  "description": "3D arcade archery game with drag-to-shoot controls",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
+

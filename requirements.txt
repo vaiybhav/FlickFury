@@ -1,6 +1,8 @@
 flask
 flask-socketio
-eventlet
-gunicorn
-opencv-python-headless
+opencv-python
+mediapipe
 numpy
+requests
+python-socketio
+eventlet

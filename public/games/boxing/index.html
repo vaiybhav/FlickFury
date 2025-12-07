@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <title>🥊 Punch Out - Boxing Game</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@400;700&display=swap">
-    <script src="/config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         :root {
@@ -492,18 +491,10 @@
     <p class="instructions">👊 Punch forward with your hands! Left hand for blue, right for red.</p>
 
     <script>
-    <script>
         // ========== GAME CONFIG ==========
-        const API_URL = window.GAME_CONFIG.API_URL;
-        const PUNCH_ENDPOINT = `${API_URL}/punch`;
-        const HANDS_ENDPOINT = `${API_URL}/hands`;
-        const GAME_ENDPOINT = `${API_URL}/game`;
-        
-        // Update webcam feed URL dynamically
-        document.addEventListener('DOMContentLoaded', () => {
-            const webcamImg = document.getElementById('webcam-feed');
-            if (webcamImg) webcamImg.src = `${API_URL}/video_feed`;
-        });
+        const PUNCH_ENDPOINT = 'http://localhost:5001/punch';
+        const HANDS_ENDPOINT = 'http://localhost:5001/hands';
+        const GAME_DURATION = 90;              // Longer game (was 60)
         const TARGET_SPAWN_INTERVAL = 2000;     // Slower spawns (was 1500)
         const TARGET_LIFETIME = 3000;           // More time to hit (was 2000)
 

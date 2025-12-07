@@ -10,7 +10,6 @@
 	<script type="text/javascript" src="js/phaser.min.js"></script>
 	<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
 	<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-	<script src="/config.js"></script>
 	<style type="text/css">
 		:root {
 			--bg-dark: #0a0a1a;
@@ -614,18 +613,12 @@
 		var gameActive = false;
 		var high_score = 0;
 
-		// Update webcam feed URL dynamically
-		document.addEventListener('DOMContentLoaded', () => {
-			const webcamImg = document.getElementById('webcam-feed');
-			if (webcamImg) webcamImg.src = `${window.GAME_CONFIG.API_URL}/video_feed`;
-		});
-
 		// ========== HAND GESTURE CONTROL ==========
 		var GESTURE_CONFIG = {
 			pollInterval: 100,
-			flickEndpoint: `${window.GAME_CONFIG.API_URL}/flick`,
-			aimEndpoint: `${window.GAME_CONFIG.API_URL}/aim`,
-			gameEndpoint: `${window.GAME_CONFIG.API_URL}/game`,
+			flickEndpoint: 'http://localhost:5001/flick',
+			aimEndpoint: 'http://localhost:5001/aim',
+			gameEndpoint: 'http://localhost:5001/game',
 			enabled: true,
 			// TUNED: Even lower for slower, controlled ball
 			vyMultiplier: -500,       // Reduced from -800 (slower upward)
