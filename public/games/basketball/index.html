@@ -539,7 +539,7 @@
 		<h1 class="game-title">🏀 Flick Hoops</h1>
 		<div class="score-display">
 			<div class="score-box player-score">
-				<span class="score-label">Score</span>
+				<span class="score-label" id="score-label">Score</span>
 				<span class="score-value" id="player-score">0</span>
 			</div>
 			<div class="timer-box" id="timer-box">
@@ -547,9 +547,15 @@
 				<span class="timer-label">sec</span>
 			</div>
 			<div class="score-box opponent-score">
-				<span class="score-label">Opponent</span>
+				<span class="score-label" id="best-label">Best</span>
 				<span class="score-value" id="opponent-score">0</span>
 			</div>
+		</div>
+		<div class="mode-toggle" style="margin-top: 0.5rem; display: flex; gap: 0.5rem; justify-content: center;">
+			<button class="mode-btn active" id="single-mode-btn" onclick="setGameMode('single')"
+				style="padding: 0.4rem 1rem; border-radius: 8px; border: 1px solid var(--secondary); background: var(--secondary); color: #000; cursor: pointer; font-weight: 600;">Solo</button>
+			<button class="mode-btn" id="multi-mode-btn" onclick="setGameMode('multiplayer')"
+				style="padding: 0.4rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text-primary); cursor: pointer; font-weight: 600;">1v1</button>
 		</div>
 		<button class="start-btn" id="start-btn" onclick="startGame()">▶ START GAME</button>
 	</header>
@@ -611,7 +617,51 @@
 		var timeRemaining = GAME_DURATION;
 		var gameTimer = null;
 		var gameActive = false;
-		var high_score = 0;
+		var gamePaused = false;  // For hand detection timeout pause
+		var high_score = parseInt(localStorage.getItem('basketball_best') || '0');
+
+		// ========== GAME MODE & MULTIPLAYER ==========
+		var gameMode = 'single'; // 'single' or 'multiplayer'
+		var currentPlayer = 1;
+		var player1Score = 0;
+		var player2Score = 0;
+
+		function setGameMode(mode) {
+			gameMode = mode;
+			currentPlayer = 1;
+			player1Score = 0;
+			player2Score = 0;
+
+			var singleBtn = document.getElementById('single-mode-btn');
+			var multiBtn = document.getElementById('multi-mode-btn');
+			var bestLabel = document.getElementById('best-label');
+			var scoreLabel = document.getElementById('score-label');
+
+			if (mode === 'single') {
+				singleBtn.classList.add('active');
+				singleBtn.style.background = 'var(--secondary)';
+				singleBtn.style.color = '#000';
+				multiBtn.classList.remove('active');
+				multiBtn.style.background = 'var(--glass)';
+				multiBtn.style.color = 'var(--text-primary)';
+				bestLabel.textContent = 'Best';
+				scoreLabel.textContent = 'Score';
+				document.getElementById('opponent-score').textContent = high_score;
+				document.getElementById('start-btn').textContent = '▶ START GAME';
+			} else {
+				multiBtn.classList.add('active');
+				multiBtn.style.background = 'var(--primary)';
+				multiBtn.style.color = '#000';
+				singleBtn.classList.remove('active');
+				singleBtn.style.background = 'var(--glass)';
+				singleBtn.style.color = 'var(--text-primary)';
+				bestLabel.textContent = 'P2';
+				scoreLabel.textContent = 'P1';
+				document.getElementById('opponent-score').textContent = '0';
+				document.getElementById('player-score').textContent = '0';
+				document.getElementById('start-btn').textContent = '▶ P1 START';
+			}
+		}
 
 		// ========== HAND GESTURE CONTROL ==========
 		var GESTURE_CONFIG = {
@@ -792,15 +842,40 @@
 			gameActive = true;
 			current_score = 0;
 			timeRemaining = GAME_DURATION;
-			updateScoreDisplay(0, high_score);
+
+			// Handle score display based on game mode
+			if (gameMode === 'single') {
+				updateScoreDisplay(0, high_score);
+			} else {
+				// Multiplayer - show correct player scores
+				if (currentPlayer === 1) {
+					document.getElementById('player-score').textContent = '0';
+					document.getElementById('opponent-score').textContent = '-';
+				} else {
+					// P2 playing - keep P1's score visible, show 0 for P2
+					document.getElementById('player-score').textContent = player1Score;
+					document.getElementById('opponent-score').textContent = '0';
+				}
+			}
+
 			updateTimerDisplay(timeRemaining);
 			document.getElementById('start-btn').disabled = true;
-			document.getElementById('start-btn').textContent = 'PLAYING...';
+			document.getElementById('start-btn').textContent = gameMode === 'multiplayer' ? 'P' + currentPlayer + ' PLAYING...' : 'PLAYING...';
 			document.getElementById('game-overlay').classList.add('hidden');
 
 			gameTimer = setInterval(function () {
 				timeRemaining--;
 				updateTimerDisplay(timeRemaining);
+
+				// Update current player's score in real-time for multiplayer
+				if (gameMode === 'multiplayer') {
+					if (currentPlayer === 1) {
+						document.getElementById('player-score').textContent = current_score;
+					} else {
+						document.getElementById('opponent-score').textContent = current_score;
+					}
+				}
+
 				if (timeRemaining <= 0) {
 					endGame();
 				}
@@ -810,15 +885,54 @@
 		function endGame() {
 			gameActive = false;
 			clearInterval(gameTimer);
-			if (current_score > high_score) {
-				high_score = current_score;
+
+			if (gameMode === 'single') {
+				// Single player - check and save best score
+				if (current_score > high_score) {
+					high_score = current_score;
+					localStorage.setItem('basketball_best', high_score.toString());
+				}
+				updateScoreDisplay(current_score, high_score);
+				document.getElementById('start-btn').disabled = false;
+				document.getElementById('start-btn').textContent = '▶ PLAY AGAIN';
+				document.getElementById('overlay-title').textContent = 'Time Up!';
+				document.getElementById('overlay-text').textContent = 'Score: ' + current_score + ' | Best: ' + high_score;
+				document.getElementById('game-overlay').classList.remove('hidden');
+			} else {
+				// Multiplayer - handle turns
+				if (currentPlayer === 1) {
+					player1Score = current_score;
+					document.getElementById('player-score').textContent = player1Score;
+					currentPlayer = 2;
+					document.getElementById('start-btn').disabled = false;
+					document.getElementById('start-btn').textContent = '▶ P2 START';
+					document.getElementById('overlay-title').textContent = 'Player 1 Done!';
+					document.getElementById('overlay-text').textContent = 'P1 Score: ' + player1Score + ' | Now it\'s P2\'s turn!';
+					document.getElementById('game-overlay').classList.remove('hidden');
+				} else {
+					player2Score = current_score;
+					// Update both score displays with final values
+					document.getElementById('player-score').textContent = player1Score;
+					document.getElementById('opponent-score').textContent = player2Score;
+
+					// Determine winner
+					var winner = '';
+					if (player1Score > player2Score) {
+						winner = '🏆 Player 1 Wins!';
+					} else if (player2Score > player1Score) {
+						winner = '🏆 Player 2 Wins!';
+					} else {
+						winner = '🤝 It\'s a Tie!';
+					}
+
+					currentPlayer = 1;
+					document.getElementById('start-btn').disabled = false;
+					document.getElementById('start-btn').textContent = '▶ REMATCH';
+					document.getElementById('overlay-title').textContent = winner;
+					document.getElementById('overlay-text').textContent = 'P1: ' + player1Score + ' | P2: ' + player2Score;
+					document.getElementById('game-overlay').classList.remove('hidden');
+				}
 			}
-			updateScoreDisplay(current_score, high_score);
-			document.getElementById('start-btn').disabled = false;
-			document.getElementById('start-btn').textContent = '▶ PLAY AGAIN';
-			document.getElementById('overlay-title').textContent = 'Time Up!';
-			document.getElementById('overlay-text').textContent = 'Score: ' + current_score + ' | Best: ' + high_score;
-			document.getElementById('game-overlay').classList.remove('hidden');
 		}
 
 		function updateTimerDisplay(time) {
@@ -839,6 +953,45 @@
 			bestEl.textContent = best;
 			scoreEl.parentElement.classList.add('score-pop');
 			setTimeout(() => scoreEl.parentElement.classList.remove('score-pop'), 400);
+		}
+
+		// ========== PAUSE/RESUME FOR HAND DETECTION ==========
+		function pauseGame() {
+			if (!gameActive || gamePaused) return;
+			gamePaused = true;
+			clearInterval(gameTimer);
+			document.getElementById('start-btn').textContent = '⏸️ PAUSED';
+			document.getElementById('overlay-title').textContent = '⏸️ Paused';
+			document.getElementById('overlay-text').textContent = 'Show hands to resume!';
+			document.getElementById('game-overlay').classList.remove('hidden');
+			console.log('⏸️ Game paused - time remaining:', timeRemaining);
+		}
+
+		function resumeGame() {
+			if (!gameActive || !gamePaused) return;
+			gamePaused = false;
+			document.getElementById('game-overlay').classList.add('hidden');
+			document.getElementById('start-btn').textContent = 'PLAYING...';
+			console.log('▶️ Game resumed - time remaining:', timeRemaining);
+
+			// Restart the timer from where we left off
+			gameTimer = setInterval(function () {
+				timeRemaining--;
+				updateTimerDisplay(timeRemaining);
+
+				// Update current player's score in real-time for multiplayer
+				if (gameMode === 'multiplayer') {
+					if (currentPlayer === 1) {
+						document.getElementById('player-score').textContent = current_score;
+					} else {
+						document.getElementById('opponent-score').textContent = current_score;
+					}
+				}
+
+				if (timeRemaining <= 0) {
+					endGame();
+				}
+			}, 1000);
 		}
 
 		// ========== PHASER GAME ==========
@@ -1145,6 +1298,26 @@
 					document.getElementById('opponent-score').textContent = opponentScore;
 					document.getElementById('opponent-score').parentElement.classList.add('score-pop');
 					setTimeout(() => document.getElementById('opponent-score').parentElement.classList.remove('score-pop'), 400);
+				});
+
+				// Listen for game state changes from Python backend
+				mpSocket.on('game_state_change', function (data) {
+					console.log('🎮 Game state:', data);
+					if (data.status === 'playing') {
+						if (gamePaused) {
+							// Resume from pause
+							console.log('▶️ Resuming game!');
+							resumeGame();
+						} else if (!gameActive) {
+							// Auto-start the game when Python says "playing"
+							console.log('🚀 Auto-starting game!');
+							startGame();
+						}
+					} else if (data.status === 'paused' && gameActive && !gamePaused) {
+						// Pause the game (don't end it)
+						console.log('⏸️ Pausing game!');
+						pauseGame();
+					}
 				});
 			} catch (e) {
 				console.log('Multiplayer not available:', e);

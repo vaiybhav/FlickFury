@@ -17,6 +17,7 @@ punch_data = None
 aim_data = {"x": 0.5, "y": 0.5}
 hands_data = {"left": {"x": 0.3, "y": 0.5}, "right": {"x": 0.7, "y": 0.5}}
 active_game = None
+game_state = {"status": "waiting", "message": "Show high-five to start"}  # waiting, countdown, playing, paused
 
 # ========== MULTIPLAYER STATE ==========
 players = {}  # {session_id: {name, game, room, hands, score, ...}}
@@ -71,6 +72,7 @@ def add_cors_headers(response):
 @app.route("/aim", methods=["OPTIONS"])
 @app.route("/hands", methods=["OPTIONS"])
 @app.route("/game", methods=["OPTIONS"])
+@app.route("/game_state", methods=["OPTIONS"])
 def handle_options():
     return '', 204
 
@@ -148,6 +150,22 @@ def receive_hands():
 @app.route("/hands", methods=["GET"])
 def get_hands():
     return jsonify(hands_data)
+
+# ========== GAME STATE ENDPOINTS (auto start/pause) ==========
+@app.route("/game_state", methods=["POST"])
+def update_game_state():
+    global game_state
+    data = request.json
+    if data:
+        game_state = data
+        print(f"🎮 Game state: {game_state.get('status')} - {game_state.get('message', '')}")
+        # Broadcast to all connected games
+        socketio.emit('game_state_change', game_state, broadcast=True)
+    return {"status": "ok"}
+
+@app.route("/game_state", methods=["GET"])
+def get_game_state():
+    return jsonify(game_state)
 
 # ========== ACTIVE GAME REGISTRATION ==========
 @app.route("/game", methods=["POST"])

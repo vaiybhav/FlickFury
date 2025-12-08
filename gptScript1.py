@@ -57,6 +57,11 @@ game_state = GameState.WAITING_FOR_HIGHFIVE
 countdown_start = 0
 COUNTDOWN_DURATION = 5  # seconds
 
+# Hand detection timeout - reset if hands not visible for too long
+hands_visible = False
+hands_gone_time = 0  # When hands disappeared
+HANDS_TIMEOUT = 10.0  # 10 seconds without hands = force 5s countdown
+
 # ========== TRACKING STATE (per hand) ==========
 # Track both left and right hands
 hand_data = {
@@ -241,6 +246,15 @@ def send_hands(left_x, left_y, right_x, right_y):
     except:
         pass
 
+def send_game_state(status, message=""):
+    """Send game state to trigger auto-start/pause in games."""
+    try:
+        data = {"status": status, "message": message}
+        requests.post(FLASK_URL + "/game_state", json=data, timeout=0.05)
+        print(f"📡 Sent game state: {status} - {message}")
+    except:
+        pass
+
 def send_frame(frame):
     """Send frame to Flask for browser display - optimized for speed."""
     try:
@@ -308,27 +322,43 @@ with mp_hands.Hands(
                         break
         
         elif game_state == GameState.COUNTDOWN:
-            elapsed = curr_t - countdown_start
-            remaining = COUNTDOWN_DURATION - elapsed
-            
-            if remaining <= 0:
-                print("🎮 GO! Start flicking!")
-                game_state = GameState.PLAYING
-            else:
-                # Display countdown
-                cv2.putText(frame, f"Get ready!", (100, 80), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
-                cv2.putText(frame, f"{int(remaining) + 1}", (280, 200), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 8)
+            # Countdown requires hands to be visible continuously
+            if results.multi_hand_landmarks:
+                elapsed = curr_t - countdown_start
+                remaining = COUNTDOWN_DURATION - elapsed
                 
-                # Still draw hands during countdown
-                if results.multi_hand_landmarks:
+                if remaining <= 0:
+                    print("🎮 GO! Start flicking!")
+                    game_state = GameState.PLAYING
+                    hands_visible = True  # Start with hands visible
+                    hands_gone_time = 0
+                    send_game_state("playing", "Game started - flick away!")
+                else:
+                    # Display countdown
+                    cv2.putText(frame, f"Keep hands visible!", (80, 80), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3)
+                    cv2.putText(frame, f"{int(remaining) + 1}", (280, 200), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 8)
+                    
+                    # Draw hands during countdown
                     for hand_landmarks in results.multi_hand_landmarks:
                         mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            else:
+                # Hands not visible - reset countdown
+                countdown_start = curr_t  # Reset the countdown
+                cv2.putText(frame, "Show hands to continue!", (60, 80), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 165, 255), 3)
+                cv2.putText(frame, "5", (280, 200), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 165, 255), 8)
         
         elif game_state == GameState.PLAYING:
             # Normal gameplay - track both hands
             if results.multi_hand_landmarks and results.multi_handedness:
+                # Hands are visible - reset the gone timer
+                if not hands_visible:
+                    hands_visible = True
+                    hands_gone_time = 0  # Reset timeout
+                    print("✋ Hands back!")
                 for hand_landmarks, handedness in zip(results.multi_hand_landmarks, results.multi_handedness):
                     # Get hand label (Left or Right)
                     hand_label = handedness.classification[0].label
@@ -480,8 +510,29 @@ with mp_hands.Hands(
                         cv2.putText(frame, f"{label[0]}", (115, y_pos + 20), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
             else:
-                cv2.putText(frame, "Show hands to play", (10, 40), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, (100, 100, 100), 2)
+                # No hands detected - start or continue timeout
+                if hands_visible:
+                    # Hands just disappeared - start timer
+                    hands_visible = False
+                    hands_gone_time = curr_t
+                    print("👋 Hands gone - 10s timeout started...")
+                
+                if hands_gone_time > 0:
+                    time_gone = curr_t - hands_gone_time
+                    if time_gone > HANDS_TIMEOUT:
+                        print("⚠️ 10s timeout - forcing 5 second countdown...")
+                        game_state = GameState.COUNTDOWN
+                        countdown_start = curr_t
+                        hands_gone_time = 0
+                        send_game_state("paused", "Hands lost - show hands to resume")
+                        # Clear hand histories
+                        for label in hand_data:
+                            hand_data[label]['position_history'].clear()
+                            hand_data[label]['time_history'].clear()
+                    else:
+                        timeout_remaining = HANDS_TIMEOUT - time_gone
+                        cv2.putText(frame, f"Show hands! ({int(timeout_remaining)+1}s)", (10, 40), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
 
         # Send EVERY frame to browser for smooth preview
         send_frame(frame)
